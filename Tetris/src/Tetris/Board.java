@@ -1,9 +1,10 @@
 package Tetris;
 
+
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.event.*;
-
+import java.util.Random;
 
 import javax.swing.*;
 
@@ -19,29 +20,67 @@ public class Board extends JPanel implements KeyListener{
 	
 	private Timer looper;
 	
-	private Color[][] board = new Color[boardWidth][boardHeight];
+	private Color[][] board = new Color[boardHeight][boardWidth];
 	
-	private Color[][] shape = {
-				{Color.red, Color.red, Color.red},
-				{null, Color.red, null}
-				};
+	private Random random;
 	
-	private int x = 4, y = 0;
 	
-	private int normal = 700;
-	private int down = 50;
-	private int delayTimeForMovement = normal;
-	private long beginTime;
+	// 도형 색상.
+	private Color[] colors = {Color.red, Color.orange, Color.yellow, Color.green, 
+							  Color.cyan, Color.blue, Color.pink};
 	
-	private int deltaX = 0; // 좌우 이동 x 좌표.
-	private boolean collision = false;
+	private Shape[] shapes = new Shape[7];
+	private Shape currentShape;
+	
+	
 	
 	public Board() {
+		
+		// 랜덤 도형 생성.
+		random = new Random();
+		//도형 생성.
+		
+		shapes[0] = new Shape(new int[][] { // I 모양
+			{1, 1, 1, 1}
+		}, this, colors[0]);
+		
+		shapes[1] = new Shape(new int[][] { // T 모양
+			{1, 1, 1},
+			{0, 1, 0}
+		}, this, colors[1]);
+		
+		shapes[2] = new Shape(new int[][] { // L 모양
+			{1, 1, 1},
+			{1, 0, 0}
+		}, this, colors[2]);
+		
+		shapes[3] = new Shape(new int[][] { // J 모양
+			{1, 1, 1},
+			{0, 0, 1}
+		}, this, colors[3]);
+		
+		shapes[4] = new Shape(new int[][] { // S 모양
+			{0, 1, 1},
+			{1, 1, 0}
+		}, this, colors[4]);
+		
+		shapes[5] = new Shape(new int[][] { // Z 모양
+			{1, 1, 0},
+			{0, 1, 1}
+		}, this, colors[5]);
+		shapes[6] = new Shape(new int[][] { // ㅁ 모양
+			{1, 1},
+			{1, 1}
+		}, this, colors[6]);
+		
+		currentShape = shapes[0];
+		
+		
 		
 //		looper = new Timer(700, new ActionListener() { //게임 속도 수동지정.(낮을수록 빠름).
 		looper = new Timer(delayTime, new ActionListener() { //게임 속도 (delayTime) 난이도 설정가능.
 			
-			int n = 0; 
+//			int n = 0; 
 			
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -57,33 +96,19 @@ public class Board extends JPanel implements KeyListener{
 		
 	}
 	
-		private void update() {  // 도형이 바닥에 고정되고 다음 도형을 준비하게 해주는 메소드.
-			
-			// 바닥에 다 내려간 도형의 진행을 멈추고 다음도형을 부를 수 있게 해줌.
-			if(collision) {
-				return;
-			}
-			
-			
-			//도형이 보드 밖으로 안튀어나가게끔 잡아주는 코드.
-			if(!(x + deltaX + shape[0].length > 10) && ! (x + deltaX < 0)) {
-				x+= deltaX; 
-			}
-			deltaX =0;
-			
-			if(System.currentTimeMillis() - beginTime > delayTimeForMovement) {
-				
-//				x+= deltaX;  // 여기에 있으면 옆으로 이동이 자연스럽지 못함.
-				
-				if(!(y + 1 + shape.length > boardHeight)) {
-					y++;
-				}else {
-					collision = true;
-				}
-				beginTime = System.currentTimeMillis();
-				
-			}
+	private void update() {
+		currentShape.update();
+	}
+	
+	public Color[][] getBoard(){
+		return board;
+	}
+	
+	public void setCurrentShape() {
+		currentShape = shapes[random.nextInt(shapes.length)];
+		currentShape.reset();
 		}
+	
 
 	@Override
 	protected void paintComponent(Graphics g) {
@@ -94,17 +119,17 @@ public class Board extends JPanel implements KeyListener{
 
 		g.fillRect(0, 0, getWidth(), getHeight()); // 배경 검정색.
 		
+		currentShape.render(g); // shape 클래스에서 도형 가져옴.
 		
-		// 도형 생성.
-		for(int row = 0; row < shape.length; row++) { 
-			for(int col = 0; col < shape[0].length; col++) {
-				if(shape[row][col] != null) {
-					g.setColor(shape[row][col]);
-					g.fillRect(col * blockSize + x * blockSize, row * blockSize + y * blockSize, blockSize, blockSize);
+		
+		for(int row = 0; row < board.length; row++) { 
+			for(int col = 0; col < board[row].length; col++) {
+				if(board[row][col] != null) {
+					g.setColor(board[row][col]);
+					g.fillRect(col * blockSize, row * blockSize, blockSize, blockSize);
 				}
 			}
 		}
-		
 		
 		// 보드 생성(줄).
 		g.setColor(Color.WHITE); 
@@ -130,12 +155,12 @@ public class Board extends JPanel implements KeyListener{
 		
 			// 드롭 다운.
 		if(e.getKeyCode() == KeyEvent.VK_DOWN) {
-			delayTimeForMovement = down;
+			currentShape.dropDown(); // 하강속도 증가.
 			// 좌우 이동.
-		}else if (e.getKeyCode() == KeyEvent.VK_RIGHT) { //우
-			deltaX +=1;
-		}else if (e.getKeyCode() == KeyEvent.VK_LEFT) { //좌
-			deltaX -=1;
+		}else if (e.getKeyCode() == KeyEvent.VK_LEFT) { //좌로 이동
+			currentShape.moveLeft();
+		}else if (e.getKeyCode() == KeyEvent.VK_RIGHT) { //우로 이동
+			currentShape.moveRight();
 		}
 	}
 
@@ -144,7 +169,7 @@ public class Board extends JPanel implements KeyListener{
 		
 		//드롭다운 에서 원래 속도로 변경.
 		if(e.getKeyCode() == KeyEvent.VK_DOWN)
-			delayTimeForMovement = normal;
+			currentShape.backNormalSPD(); // 원래 하강속도로 복귀.
 	}
 
 }
