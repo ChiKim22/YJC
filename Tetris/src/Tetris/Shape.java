@@ -1,4 +1,4 @@
-ppackage Tetris;
+package Tetris;
 
 import java.awt.*;
 import static Tetris.Board.*;
