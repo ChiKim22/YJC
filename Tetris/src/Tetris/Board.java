@@ -8,7 +8,14 @@ import java.util.Random;
 
 import javax.swing.*;
 
-public class Board extends JPanel implements KeyListener{
+public class Board extends JPanel implements KeyListener, MouseListener, MouseMotionListener{
+	
+	//게임 상태
+	public static int stateGamePlay = 0;
+	public static int stateGamePause = 1;
+	public static int stateGameOver = 2;
+	
+	private int state = stateGamePlay;
 	
 	private static int FPS = 60; // 게임 초당 프레임.
 	private static int delayTime = FPS / 1000; // ms단위.
@@ -26,12 +33,13 @@ public class Board extends JPanel implements KeyListener{
 	
 	
 	// 도형 색상.
-	private Color[] colors = {Color.red, Color.orange, Color.yellow, Color.green, 
-							  Color.cyan, Color.blue, Color.pink};
+	private Color[] colors = {Color.decode("#FF5675"), Color.decode("#3DFF92"), Color.decode("#FFEB5A"), 
+								Color.decode("#B2FA5C"), Color.decode("#00D7FF"), Color.decode("#FFA98F"), Color.decode("#00FFFF")};
 	
 	private Shape[] shapes = new Shape[7];
-	private Shape currentShape;
+	private Shape currentShape, nextShape;
 	
+	private int score = 0;
 	
 	
 	public Board() {
@@ -92,12 +100,33 @@ public class Board extends JPanel implements KeyListener{
 			
 		});
 		
-		looper.start();
+//		looper.start();
 		
 	}
 	
+	public void gameStart() {
+        gameStop();
+        setNextShape();
+        setCurrentShape();
+        state = stateGamePause;
+		looper.start();
+	}
+	
+    public void gameStop() {
+        score = 0;
+
+        for (int row = 0; row < board.length; row++) {
+            for (int col = 0; col < board[row].length; col++) {
+                board[row][col] = null;
+            }
+        }
+        looper.stop();
+    }
+	
 	private void update() {
-		currentShape.update();
+		if(state == stateGamePlay) {
+			currentShape.update();
+		}
 	}
 	
 	public Color[][] getBoard(){
@@ -107,7 +136,22 @@ public class Board extends JPanel implements KeyListener{
 	public void setCurrentShape() {
 		currentShape = shapes[random.nextInt(shapes.length)];
 		currentShape.reset();
+		checkGameOver();
 		}
+	
+	private void checkGameOver() { // 게임오버 체크
+		int[][] blocks = currentShape.getBlock();
+		for(int row = 0; row < blocks.length; row++) {
+			for(int col = 0; col < blocks[0].length; col++) {
+				if(blocks[row][col] != 0) {
+					if(board[row + currentShape.getY()][col + currentShape.getX()] != null) {
+						state = stateGameOver; // 게임오버
+						System.out.println("Game Over...");
+					}
+				}
+			}
+		}
+	}
 	
 
 	@Override
@@ -115,11 +159,14 @@ public class Board extends JPanel implements KeyListener{
 		// TODO Auto-generated method stub
 		super.paintComponent(g);
 		
-		g.setColor(Color.BLACK);
+//		g.setColor(Color.decode("#DDDDDD")); // 배경색.
+		g.setColor(Color.black); // 배경색.
 
-		g.fillRect(0, 0, getWidth(), getHeight()); // 배경 검정색.
-		
+		g.fillRect(0, 0, getWidth(), getHeight());
 		currentShape.render(g); // shape 클래스에서 도형 가져옴.
+		
+		g.setColor(Color.decode("#B2FA5C"));
+		g.drawString("SCORE", 350, 30);
 		
 		
 		for(int row = 0; row < board.length; row++) { 
@@ -141,7 +188,29 @@ public class Board extends JPanel implements KeyListener{
 			g.drawLine(col * blockSize, 0, col * blockSize, blockSize * boardHeight);
 		}
 		
+		if(state == stateGameOver) {
+		g.setColor(Color.decode("#FF5675"));
+		g.drawString("Game Over...", 330, 200);
+		
+		g.setColor(Color.white);
+		g.drawString("Press Space to restart...", 150, 500);
+		}
+		
+		if(state == stateGamePlay) {
+			g.setColor(Color.white);
+			g.drawString("Press Space to pause", 150, 500);
+		}else if(state == stateGamePause) {
+			g.setColor(Color.decode("#00D7FF"));
+			g.drawString("Press Space to resume", 150, 500);
+		}
+		 
 	}
+    public void setNextShape() {
+        int index = random.nextInt(shapes.length);
+        int colorIndex = random.nextInt(colors.length);
+        nextShape = new Shape(shapes[index].getBlock(), this, colors[colorIndex]);
+    }
+
 
 	@Override
 	public void keyTyped(KeyEvent e) {
@@ -161,7 +230,34 @@ public class Board extends JPanel implements KeyListener{
 			currentShape.moveLeft();
 		}else if (e.getKeyCode() == KeyEvent.VK_RIGHT) { //우로 이동
 			currentShape.moveRight();
+		}else if (e.getKeyCode() == KeyEvent.VK_UP) { //블록 회전
+			currentShape.rotateShape();
 		}
+		
+		
+		//보드 초기화.
+		if(state == stateGameOver) {
+			if(e.getKeyCode() == KeyEvent.VK_SPACE) {
+				for(int row = 0; row < board.length; row++) { 
+					for(int col = 0; col < board[row].length; col++) {
+						board[row][col] = null;
+						
+					}
+				}
+				setCurrentShape();
+				state = stateGamePlay;
+			}
+		}
+		//일시정지.
+		if(e.getKeyCode() == KeyEvent.VK_SPACE) {
+			if(state == stateGamePlay) {
+				state = stateGamePause;
+			}else if(state == stateGamePause) {
+				state = stateGamePlay;
+			}
+			
+		}
+		
 	}
 
 	@Override
@@ -171,5 +267,62 @@ public class Board extends JPanel implements KeyListener{
 		if(e.getKeyCode() == KeyEvent.VK_DOWN)
 			currentShape.backNormalSPD(); // 원래 하강속도로 복귀.
 	}
+
+	class GameLooper implements ActionListener {
+
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            update();
+            repaint();
+        }
+
+    }
+
+    public void addScore() {
+        score++;
+    }
+
+	@Override
+	public void mouseDragged(MouseEvent e) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void mouseMoved(MouseEvent e) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void mouseClicked(MouseEvent e) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void mousePressed(MouseEvent e) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void mouseReleased(MouseEvent e) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void mouseEntered(MouseEvent e) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void mouseExited(MouseEvent e) {
+		// TODO Auto-generated method stub
+		
+	}
+
 
 }
