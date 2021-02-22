@@ -1,210 +1,328 @@
 package Tetris;
 
-import java.awt.*;
-import static Tetris.Board.*;
 
+import java.awt.Color;
+import java.awt.Graphics;
+import java.awt.event.*;
+import java.util.Random;
 
-public class Shape {
+import javax.swing.*;
 
-private int x = 4, y = 0;
+public class Board extends JPanel implements KeyListener, MouseListener, MouseMotionListener{
 	
-	private int normal = 700;
-	private int down = 50;
-	private int delayTimeForMovement = normal;
-	private long beginTime;
+	//게임 상태
+	public static int stateGamePlay = 0;
+	public static int stateGamePause = 1;
+	public static int stateGameOver = 2;
 	
-	private int deltaX = 0; // 좌우 이동 x 좌표.
-	private boolean collision = false;
+	private int state = stateGamePlay;
 	
-	private int[][] block;
-	private Board board;
-	private Color color;
+	private static int FPS = 60; // 게임 초당 프레임.
+	private static int delayTime = FPS / 1000; // ms단위.
 	
-	public Shape(int[][] block, Board board, Color color) {
-		this.block = block;
-		this.board = board;
-		this.color = color;
-	}
 	
-	public void setX(int x) {
-		this.x = x;
-	}
+	public static final int boardWidth = 10;
+	public static final int boardHeight = 20;
+	public static final int blockSize = 30;
 	
-	public void setY(int y) {
-		this.y = y;
-	}
+	private Timer looper;
 	
-	public void reset() {
-		this.x = 4;
-		this.y = 0;
-		collision = false;
-	}
+	private Color[][] board = new Color[boardHeight][boardWidth];
 	
-	public void update() {  // 도형이 바닥에 고정되고 다음 도형을 준비하게 해주는 메소드.
+	private Random random;
+	
+	
+	// 도형 색상.
+	private Color[] colors = {Color.decode("#FF5675"), Color.decode("#3DFF92"), Color.decode("#FFEB5A"), 
+								Color.decode("#B2FA5C"), Color.decode("#00D7FF"), Color.decode("#FFA98F"), Color.decode("#00FFFF")};
+	
+	private Shape[] shapes = new Shape[7];
+	private Shape currentShape, nextShape;
+	
+	private int score = 0;
+	
+	
+	public Board() {
 		
-		// 바닥에 다 내려간 도형의 진행을 멈추고 다음도형을 부를 수 있게 해줌.
-		if(collision) {
+		// 랜덤 도형 생성.
+		random = new Random();
+		//도형 생성.
+		
+		shapes[0] = new Shape(new int[][] { // I 모양
+			{1, 1, 1, 1}
+		}, this, colors[0]);
+		
+		shapes[1] = new Shape(new int[][] { // T 모양
+			{1, 1, 1},
+			{0, 1, 0}
+		}, this, colors[1]);
+		
+		shapes[2] = new Shape(new int[][] { // L 모양
+			{1, 1, 1},
+			{1, 0, 0}
+		}, this, colors[2]);
+		
+		shapes[3] = new Shape(new int[][] { // J 모양
+			{1, 1, 1},
+			{0, 0, 1}
+		}, this, colors[3]);
+		
+		shapes[4] = new Shape(new int[][] { // S 모양
+			{0, 1, 1},
+			{1, 1, 0}
+		}, this, colors[4]);
+		
+		shapes[5] = new Shape(new int[][] { // Z 모양
+			{1, 1, 0},
+			{0, 1, 1}
+		}, this, colors[5]);
+		shapes[6] = new Shape(new int[][] { // ㅁ 모양
+			{1, 1},
+			{1, 1}
+		}, this, colors[6]);
+		
+		currentShape = shapes[0];
+		
+		
+		
+//		looper = new Timer(700, new ActionListener() { //게임 속도 수동지정.(낮을수록 빠름).
+		looper = new Timer(delayTime, new ActionListener() { //게임 속도 (delayTime) 난이도 설정가능.
 			
-			// 보드에 색상 부여.
-			for(int row = 0; row < block.length; row++) {
-				for(int col = 0; col < block[0].length; col++) {
-					if(block[row][col] != 0) {
-						board.getBoard()[y + row][x + col] = color;
+//			int n = 0; 
+			
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				
+				update();
+				repaint();				
+				
+			}
+			
+		});
+		
+//		looper.start();
+		
+	}
+	
+	public void gameStart() {
+        gameStop();
+        setNextShape();
+        setCurrentShape();
+        state = stateGamePause;
+		looper.start();
+	}
+	
+    public void gameStop() {
+        score = 0;
+
+        for (int row = 0; row < board.length; row++) {
+            for (int col = 0; col < board[row].length; col++) {
+                board[row][col] = null;
+            }
+        }
+        looper.stop();
+    }
+	
+	private void update() {
+		if(state == stateGamePlay) {
+			currentShape.update();
+		}
+	}
+	
+	public Color[][] getBoard(){
+		return board;
+	}
+	
+	public void setCurrentShape() {
+		currentShape = shapes[random.nextInt(shapes.length)];
+		currentShape.reset();
+		checkGameOver();
+		}
+	
+	private void checkGameOver() { // 게임오버 체크
+		int[][] blocks = currentShape.getBlock();
+		for(int row = 0; row < blocks.length; row++) {
+			for(int col = 0; col < blocks[0].length; col++) {
+				if(blocks[row][col] != 0) {
+					if(board[row + currentShape.getY()][col + currentShape.getX()] != null) {
+						state = stateGameOver; // 게임오버
+						System.out.println("Game Over...");
 					}
 				}
 			}
-			checkLine();
-			// 다음 도형 생성.
-			board.setCurrentShape();
-			
-			//점수.
-			board.addScore();
-			return;
 		}
+	}
+	
+
+	@Override
+	protected void paintComponent(Graphics g) {
+		// TODO Auto-generated method stub
+		super.paintComponent(g);
+		
+//		g.setColor(Color.decode("#DDDDDD")); // 배경색.
+		g.setColor(Color.black); // 배경색.
+
+		g.fillRect(0, 0, getWidth(), getHeight());
+		currentShape.render(g); // shape 클래스에서 도형 가져옴.
+		
+		g.setColor(Color.decode("#B2FA5C"));
+		g.drawString("SCORE", 350, 30);
 		
 		
-		boolean moveX = true;
-		//도형이 보드 밖으로 안튀어나가게끔 잡아주는 코드.
-		if(!(x + deltaX + block[0].length > 10) && ! (x + deltaX < 0)) {
-			
-			// 다음에 나오는 도형의 모양을 변경해주는 로직.
-			for(int row = 0; row < block.length; row++) {
-				for(int col = 0; col < block[row].length; col++) {
-					if(block[row][col] != 0) {
-						if(board.getBoard()[y + row][x + deltaX + col] != null){
-							moveX = false;
-						}
-					}	
+		for(int row = 0; row < board.length; row++) { 
+			for(int col = 0; col < board[row].length; col++) {
+				if(board[row][col] != null) {
+					g.setColor(board[row][col]);
+					g.fillRect(col * blockSize, row * blockSize, blockSize, blockSize);
 				}
 			}
-			if(moveX) {
-				x+= deltaX; 
-			}
 		}
-		deltaX =0;
 		
-		if(System.currentTimeMillis() - beginTime > delayTimeForMovement) {			
-//			x+= deltaX;  // 여기에 있으면 옆으로 이동이 자연스럽지 못함.
-			
-			// 도형을 겹치지 않게 해줌. 
-			if(!(y + 1 + block.length > boardHeight)) {
-				for(int row = 0; row < block.length; row++) {
-					for(int col = 0; col < block[row].length; col++) {
-						if(block[row][col] != 0) {
-							if(board.getBoard()[y + 1 + row][x + deltaX + col] != null) {
-								collision = true;
-							}
-						}
+		// 보드 생성(줄).
+		g.setColor(Color.WHITE); 
+		for(int row =0; row < boardHeight; row++) { // 가로줄.
+			g.drawLine(0, blockSize * row, blockSize * boardWidth, blockSize * row);
+		}
+		
+		for(int col = 0; col < boardWidth + 1; col++) { // 세로줄.
+			g.drawLine(col * blockSize, 0, col * blockSize, blockSize * boardHeight);
+		}
+		
+		if(state == stateGameOver) {
+		g.setColor(Color.decode("#FF5675"));
+		g.drawString("Game Over...", 330, 200);
+		
+		g.setColor(Color.white);
+		g.drawString("Press Space to restart...", 150, 500);
+		}
+		
+		if(state == stateGamePlay) {
+			g.setColor(Color.white);
+			g.drawString("Press Space to pause", 150, 500);
+		}else if(state == stateGamePause) {
+			g.setColor(Color.decode("#00D7FF"));
+			g.drawString("Press Space to resume", 150, 500);
+		}
+		 
+	}
+    public void setNextShape() {
+        int index = random.nextInt(shapes.length);
+        int colorIndex = random.nextInt(colors.length);
+        nextShape = new Shape(shapes[index].getBlock(), this, colors[colorIndex]);
+    }
+
+
+	@Override
+	public void keyTyped(KeyEvent e) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void keyPressed(KeyEvent e) {
+		// TODO Auto-generated method stub
+		
+			// 드롭 다운.
+		if(e.getKeyCode() == KeyEvent.VK_DOWN) {
+			currentShape.dropDown(); // 하강속도 증가.
+			// 좌우 이동.
+		}else if (e.getKeyCode() == KeyEvent.VK_LEFT) { //좌로 이동
+			currentShape.moveLeft();
+		}else if (e.getKeyCode() == KeyEvent.VK_RIGHT) { //우로 이동
+			currentShape.moveRight();
+		}else if (e.getKeyCode() == KeyEvent.VK_UP) { //블록 회전
+			currentShape.rotateShape();
+		}
+		
+		
+		//보드 초기화.
+		if(state == stateGameOver) {
+			if(e.getKeyCode() == KeyEvent.VK_SPACE) {
+				for(int row = 0; row < board.length; row++) { 
+					for(int col = 0; col < board[row].length; col++) {
+						board[row][col] = null;
+						
 					}
 				}
-				if(!collision)
-				y++;
-			}else {
-				collision = true;
+				setCurrentShape();
+				state = stateGamePlay;
 			}
-			beginTime = System.currentTimeMillis();
+		}
+		//일시정지.
+		if(e.getKeyCode() == KeyEvent.VK_SPACE) {
+			if(state == stateGamePlay) {
+				state = stateGamePause;
+			}else if(state == stateGamePause) {
+				state = stateGamePlay;
+			}
 			
 		}
-	}
-	
-	private void checkLine() { // 줄 꽉 차면 지우기.
-		int bottomLine = board.getBoard().length - 1;
-		for(int tL = board.getBoard().length - 1; tL > 0; tL--) { // tL == topLine
-			int count = 0;
-			for(int col = 0; col < board.getBoard()[0].length; col++) {
-				if(board.getBoard()[bottomLine][col] != null) {
-				count++;
-			}
-			board.getBoard()[bottomLine][col] = board.getBoard()[tL][col];
-			}
-			if(count < board.getBoard()[0].length) {
-				bottomLine--; // 맨 아랫줄 제거.
-			}
-		}
-	}
-	
-	
-	// 도형 돌리기.
-	public void rotateShape() {
-		int[][] rotatedShape = transposeMatrix(block);
-		reverseRows(rotatedShape);
-		
-		// 도형을 벽에서 돌릴떄 벽이나 바닥에 끼는 현상 완화.
-		if((x + rotatedShape[0].length > Board.boardWidth) || (y + rotatedShape.length > 20)) {
-			return;
-		}
-		
-		// 도형과 도형사이에서 회전할 떄 끼는 현상 완화.
-		for(int row = 0; row < rotatedShape.length; row++) {
-			for(int col = 0; col < rotatedShape[row].length; col++) {
-				if(rotatedShape[row][col] != 0) {
-					if(board.getBoard()[y + row][x + col] != null) {
-						return;
-					}
-				}
-			}
-		}
-		
-		block = rotatedShape;
- 	}
-	
-	private int[][] transposeMatrix(int[][] matrix) {
-		int[][] temp = new int[matrix[0].length][matrix.length];
-		
-		for(int row = 0; row < matrix[0].length; row++) {
-			for(int col = 0; col < matrix.length; col++) {
-				temp[row][col] = matrix[col][row]; 
-			}
-		}
-		return temp;
-	}
-	
-	private void reverseRows(int[][] matrix) {
-		int middle = matrix.length / 2;
-		for(int row = 0; row < middle; row++) {
-			int[] temp = matrix[row];
-			matrix[row] = matrix[matrix.length - row - 1];
-			matrix[matrix.length - row - 1] = temp;
-		}
-	}
-	
-	
-	public void render(Graphics g) {
-		// 도형 생성.
-		for(int row = 0; row < block.length; row++) { 
-			for(int col = 0; col < block[0].length; col++) {
-				if(block[row][col] != 0) {
-					g.setColor(color);
-					g.fillRect(col * blockSize + x * blockSize, row * blockSize + y * blockSize, blockSize, blockSize);
-				}
-			}
-		}
 		
 	}
-	public int[][] getBlock() {
-		return block;
+
+	@Override
+	public void keyReleased(KeyEvent e) {
+		
+		//드롭다운 에서 원래 속도로 변경.
+		if(e.getKeyCode() == KeyEvent.VK_DOWN)
+			currentShape.backNormalSPD(); // 원래 하강속도로 복귀.
 	}
-	public void dropDown() {
-		delayTimeForMovement = down;
+
+	class GameLooper implements ActionListener {
+
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            update();
+            repaint();
+        }
+
+    }
+
+    public void addScore() {
+        score++;
+    }
+
+	@Override
+	public void mouseDragged(MouseEvent e) {
+		// TODO Auto-generated method stub
+		
 	}
-	
-	public void backNormalSPD() {
-		delayTimeForMovement = normal;
+
+	@Override
+	public void mouseMoved(MouseEvent e) {
+		// TODO Auto-generated method stub
+		
 	}
-	
-	public void moveLeft() {
-		deltaX = -1;
+
+	@Override
+	public void mouseClicked(MouseEvent e) {
+		// TODO Auto-generated method stub
+		
 	}
-	
-	public void moveRight() {
-		deltaX = 1;
+
+	@Override
+	public void mousePressed(MouseEvent e) {
+		// TODO Auto-generated method stub
+		
 	}
-	public int getY() {
-		return y;
+
+	@Override
+	public void mouseReleased(MouseEvent e) {
+		// TODO Auto-generated method stub
+		
 	}
-	public int getX() {
-		return x;
+
+	@Override
+	public void mouseEntered(MouseEvent e) {
+		// TODO Auto-generated method stub
+		
 	}
-	
+
+	@Override
+	public void mouseExited(MouseEvent e) {
+		// TODO Auto-generated method stub
+		
+	}
+
+
 }
-
