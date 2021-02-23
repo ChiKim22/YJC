@@ -8,17 +8,18 @@ public class Shape {
 
 private int x = 4, y = 0;
 	
-	private int normal = 700;
-	private int down = 50;
-	private int delayTimeForMovement = normal;
+	private int normal = 600;
+	private int down = 100;
+	private int delay = normal;
 	private long beginTime;
 	
 	private int deltaX = 0; // 좌우 이동 x 좌표.
-	private boolean collision = false;
+	private boolean collision;
 	
 	private int[][] block;
 	private Board board;
 	private Color color;
+	
 	
 	public Shape(int[][] block, Board board, Color color) {
 		this.block = block;
@@ -53,15 +54,20 @@ private int x = 4, y = 0;
 					}
 				}
 			}
+			checkLine();
 			// 다음 도형 생성.
 			board.setCurrentShape();
+			
+			//점수.
+			board.addScore();
+			
 			return;
 		}
 		
 		
 		boolean moveX = true;
 		//도형이 보드 밖으로 안튀어나가게끔 잡아주는 코드.
-		if(!(x + deltaX + block[0].length > 10) && ! (x + deltaX < 0)) {
+		if(!(x + deltaX + block[0].length > 10) && !(x + deltaX < 0)) {
 			
 			// 다음에 나오는 도형의 모양을 변경해주는 로직.
 			for(int row = 0; row < block.length; row++) {
@@ -74,38 +80,110 @@ private int x = 4, y = 0;
 				}
 			}
 			if(moveX) {
-				x+= deltaX; 
+				x += deltaX; 
 			}
 		}
 		deltaX =0;
 		
-		if(System.currentTimeMillis() - beginTime > delayTimeForMovement) {			
+		if(System.currentTimeMillis() - beginTime > delay) {			
 //			x+= deltaX;  // 여기에 있으면 옆으로 이동이 자연스럽지 못함.
 			
 			// 도형을 겹치지 않게 해줌. 
-			
-			if(!(y + 1 + block.length > boardHeight)) {
+			if(!(y + 1 + block.length > 20)) {
+				
 				for(int row = 0; row < block.length; row++) {
-					for(int col = 0; col < block.length; col++) {
+					for(int col = 0; col < block[row].length; col++) {
 						if(block[row][col] != 0) {
+							
 							if(board.getBoard()[y + 1 + row][x + deltaX + col] != null) {
 								collision = true;
 							}
 						}
 					}
 				}
-				if(!collision)
-				y++;
+				if(!collision) {
+					y++;
+				}
 			}else {
-				collision = true;
+				collision = true;	
+				}
+				beginTime = System.currentTimeMillis();
 			}
-			beginTime = System.currentTimeMillis();
-			
+	}
+	
+	private void checkLine() { // 줄 꽉 차면 지우기.
+		int bottomLine = board.getBoard().length - 1;
+		for(int topLine = board.getBoard().length - 1; topLine > 0; topLine--) { // topLine
+			int count = 0;
+			for(int col = 0; col < board.getBoard()[0].length; col++) {
+				if(board.getBoard()[topLine][col] != null) {
+				count++;
+			}
+			board.getBoard()[bottomLine][col] = board.getBoard()[topLine][col];
+			}
+			if(count < board.getBoard()[0].length) {
+				bottomLine--; // 맨 아랫줄 제거.
+			}
 		}
 	}
 	
+	
+	// 도형 돌리기.
+	public void rotateShape() {
+		
+		int[][] rotatedShape = null;
+		
+		rotatedShape = transposeMatrix(block);
+		
+		rotatedShape = reverseRows(rotatedShape);
+		
+		// 도형을 벽에서 돌릴떄 벽이나 바닥에 끼는 현상 완화.
+		if((x + rotatedShape[0].length > 10) || (y + rotatedShape.length > 20)) {
+			return;
+		}
+		
+		// 도형과 도형사이에서 회전할 떄 끼는 현상 완화.
+		for(int row = 0; row < rotatedShape.length; row++) {
+			for(int col = 0; col < rotatedShape[row].length; col++) {
+				if(rotatedShape[row][col] != 0) {
+					if(board.getBoard()[y + row][x + col] != null) {
+						return;
+					}
+				}
+			}
+		}
+		
+		block = rotatedShape;
+ 	}
+	
+	private int[][] transposeMatrix(int[][] matrix) {
+		int[][] temp = new int[matrix[0].length][matrix.length];
+		
+		for(int row = 0; row < matrix.length; row++) {
+			for(int col = 0; col < matrix[0].length; col++) {
+				temp[col][row] = matrix[row][col]; 
+			}
+		}
+		return temp;
+	}
+	
+	private int[][] reverseRows(int[][] matrix) {
+		
+		int middle = matrix.length / 2;
+		
+		for(int row = 0; row < middle; row++) {
+			int[] temp = matrix[row];
+			
+			matrix[row] = matrix[matrix.length - row - 1];
+			matrix[matrix.length - row - 1] = temp;
+		}
+		return matrix;
+	}
+	
+	
 	public void render(Graphics g) {
 		// 도형 생성.
+		g.setColor(color);
 		for(int row = 0; row < block.length; row++) { 
 			for(int col = 0; col < block[0].length; col++) {
 				if(block[row][col] != 0) {
@@ -116,12 +194,15 @@ private int x = 4, y = 0;
 		}
 		
 	}
+	public int[][] getBlock() {
+		return block;
+	}
 	public void dropDown() {
-		delayTimeForMovement = down;
+		delay = down;
 	}
 	
 	public void backNormalSPD() {
-		delayTimeForMovement = normal;
+		delay = normal;
 	}
 	
 	public void moveLeft() {
@@ -131,4 +212,12 @@ private int x = 4, y = 0;
 	public void moveRight() {
 		deltaX = 1;
 	}
+	public int getY() {
+		return y;
+	}
+	public int getX() {
+		return x;
+	}
+	
 }
+
