@@ -8,9 +8,8 @@ public class Shape {
 
 private int x = 4, y = 0;
 	
-	private int normal = 600;
-	private int down = 100;
-	private int delay = normal;
+	private int normal = 700, down = 50;;
+	private int delay;
 	private long beginTime;
 	
 	private int deltaX = 0; // 좌우 이동 x 좌표.
@@ -85,8 +84,10 @@ private int x = 4, y = 0;
 		}
 		deltaX =0;
 		
-		if(System.currentTimeMillis() - beginTime > delay) {			
+		if(System.currentTimeMillis() - beginTime > delay) {
 //			x+= deltaX;  // 여기에 있으면 옆으로 이동이 자연스럽지 못함.
+			
+			delay = normal;
 			
 			// 도형을 겹치지 않게 해줌. 
 			if(!(y + 1 + block.length > 20)) {
@@ -109,6 +110,7 @@ private int x = 4, y = 0;
 				}
 				beginTime = System.currentTimeMillis();
 			}
+		
 	}
 	
 	private void checkLine() { // 줄 꽉 차면 지우기.
@@ -220,4 +222,3 @@ private int x = 4, y = 0;
 	}
 	
 }
-
