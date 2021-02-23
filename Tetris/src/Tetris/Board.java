@@ -2,14 +2,23 @@ package Tetris;
 
 
 import java.awt.Color;
+import java.awt.Font;
 import java.awt.Graphics;
-import java.awt.event.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.util.Random;
 
-import javax.swing.*;
+import javax.swing.JPanel;
+import javax.swing.Timer;
 
-public class Board extends JPanel implements KeyListener, MouseListener, MouseMotionListener{
+public class Board extends JPanel implements KeyListener{
 	
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
 	//게임 상태
 	public static int stateGamePlay = 0;
 	public static int stateGamePause = 1;
@@ -37,9 +46,9 @@ public class Board extends JPanel implements KeyListener, MouseListener, MouseMo
 								Color.decode("#B2FA5C"), Color.decode("#00D7FF"), Color.decode("#FFA98F"), Color.decode("#00FFFF")};
 	
 	private Shape[] shapes = new Shape[7];
-	private Shape currentShape, nextShape;
+	private Shape currentShape;
 	
-	private int score = 0;
+	public int score = 0;
 	
 	
 	public Board() {
@@ -88,11 +97,10 @@ public class Board extends JPanel implements KeyListener, MouseListener, MouseMo
 //		looper = new Timer(700, new ActionListener() { //게임 속도 수동지정.(낮을수록 빠름).
 		looper = new Timer(delayTime, new ActionListener() { //게임 속도 (delayTime) 난이도 설정가능.
 			
-//			int n = 0; 
+			int n = 0; 
 			
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				
 				update();
 				repaint();				
 				
@@ -100,28 +108,9 @@ public class Board extends JPanel implements KeyListener, MouseListener, MouseMo
 			
 		});
 		
-//		looper.start();
+		looper.start();
 		
 	}
-	
-	public void gameStart() {
-        gameStop();
-        setNextShape();
-        setCurrentShape();
-        state = stateGamePause;
-		looper.start();
-	}
-	
-    public void gameStop() {
-        score = 0;
-
-        for (int row = 0; row < board.length; row++) {
-            for (int col = 0; col < board[row].length; col++) {
-                board[row][col] = null;
-            }
-        }
-        looper.stop();
-    }
 	
 	private void update() {
 		if(state == stateGamePlay) {
@@ -129,15 +118,12 @@ public class Board extends JPanel implements KeyListener, MouseListener, MouseMo
 		}
 	}
 	
-	public Color[][] getBoard(){
-		return board;
-	}
 	
-	public void setCurrentShape() {
-		currentShape = shapes[random.nextInt(shapes.length)];
-		currentShape.reset();
-		checkGameOver();
-		}
+    public void setCurrentShape() {
+        currentShape = shapes[random.nextInt(shapes.length)];
+        currentShape.reset();
+        checkGameOver();
+    }
 	
 	private void checkGameOver() { // 게임오버 체크
 		int[][] blocks = currentShape.getBlock();
@@ -163,14 +149,19 @@ public class Board extends JPanel implements KeyListener, MouseListener, MouseMo
 		g.setColor(Color.black); // 배경색.
 
 		g.fillRect(0, 0, getWidth(), getHeight());
-		currentShape.render(g); // shape 클래스에서 도형 가져옴.
 		
+		g.setFont(new Font("Georgia", Font.BOLD, 15));
 		g.setColor(Color.decode("#B2FA5C"));
 		g.drawString("SCORE", 350, 30);
+		
+		g.drawString(score+"", 350, 50);
+		
+		currentShape.render(g); // shape 클래스에서 도형 가져옴.
 		
 		
 		for(int row = 0; row < board.length; row++) { 
 			for(int col = 0; col < board[row].length; col++) {
+				
 				if(board[row][col] != null) {
 					g.setColor(board[row][col]);
 					g.fillRect(col * blockSize, row * blockSize, blockSize, blockSize);
@@ -189,28 +180,26 @@ public class Board extends JPanel implements KeyListener, MouseListener, MouseMo
 		}
 		
 		if(state == stateGameOver) {
+			g.setFont(new Font("Georgia", Font.BOLD, 15));
 		g.setColor(Color.decode("#FF5675"));
 		g.drawString("Game Over...", 330, 200);
 		
 		g.setColor(Color.white);
+		g.setFont(new Font("Georgia", Font.BOLD, 15));
 		g.drawString("Press Space to restart...", 150, 500);
 		}
 		
 		if(state == stateGamePlay) {
+			g.setFont(new Font("Georgia", Font.BOLD, 15));
 			g.setColor(Color.white);
 			g.drawString("Press Space to pause", 150, 500);
 		}else if(state == stateGamePause) {
+			g.setFont(new Font("Georgia", Font.BOLD, 15));
 			g.setColor(Color.decode("#00D7FF"));
 			g.drawString("Press Space to resume", 150, 500);
 		}
 		 
 	}
-    public void setNextShape() {
-        int index = random.nextInt(shapes.length);
-        int colorIndex = random.nextInt(colors.length);
-        nextShape = new Shape(shapes[index].getBlock(), this, colors[colorIndex]);
-    }
-
 
 	@Override
 	public void keyTyped(KeyEvent e) {
@@ -222,17 +211,21 @@ public class Board extends JPanel implements KeyListener, MouseListener, MouseMo
 	public void keyPressed(KeyEvent e) {
 		// TODO Auto-generated method stub
 		
-			// 드롭 다운.
-		if(e.getKeyCode() == KeyEvent.VK_DOWN) {
-			currentShape.dropDown(); // 하강속도 증가.
+		if (e.getKeyCode() == KeyEvent.VK_UP) { //블록 회전
+			currentShape.rotateShape();
+			
 			// 좌우 이동.
 		}else if (e.getKeyCode() == KeyEvent.VK_LEFT) { //좌로 이동
 			currentShape.moveLeft();
+			
 		}else if (e.getKeyCode() == KeyEvent.VK_RIGHT) { //우로 이동
 			currentShape.moveRight();
-		}else if (e.getKeyCode() == KeyEvent.VK_UP) { //블록 회전
-			currentShape.rotateShape();
+			
+			// 드롭 다운
+		}else if(e.getKeyCode() == KeyEvent.VK_DOWN) {
+			currentShape.dropDown(); // 하강속도 증가.
 		}
+		
 		
 		
 		//보드 초기화.
@@ -248,6 +241,8 @@ public class Board extends JPanel implements KeyListener, MouseListener, MouseMo
 				state = stateGamePlay;
 			}
 		}
+		
+		
 		//일시정지.
 		if(e.getKeyCode() == KeyEvent.VK_SPACE) {
 			if(state == stateGamePlay) {
@@ -267,62 +262,14 @@ public class Board extends JPanel implements KeyListener, MouseListener, MouseMo
 		if(e.getKeyCode() == KeyEvent.VK_DOWN)
 			currentShape.backNormalSPD(); // 원래 하강속도로 복귀.
 	}
-
-	class GameLooper implements ActionListener {
-
-        @Override
-        public void actionPerformed(ActionEvent e) {
-            update();
-            repaint();
-        }
-
-    }
-
+	
+	public Color[][] getBoard() {
+		return board;
+	}
+	
     public void addScore() {
-        score++;
+        score+=10;
     }
-
-	@Override
-	public void mouseDragged(MouseEvent e) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public void mouseMoved(MouseEvent e) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public void mouseClicked(MouseEvent e) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public void mousePressed(MouseEvent e) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public void mouseReleased(MouseEvent e) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public void mouseEntered(MouseEvent e) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public void mouseExited(MouseEvent e) {
-		// TODO Auto-generated method stub
-		
-	}
 
 
 }
