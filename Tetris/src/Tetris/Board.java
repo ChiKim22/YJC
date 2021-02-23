@@ -1,24 +1,13 @@
 package Tetris;
 
 
-import java.awt.Color;
-import java.awt.Font;
-import java.awt.Graphics;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
+import java.awt.*;
+import java.awt.event.*;
 import java.util.Random;
-
-import javax.swing.JPanel;
-import javax.swing.Timer;
+import javax.swing.*;
 
 public class Board extends JPanel implements KeyListener{
 	
-	/**
-	 * 
-	 */
-	private static final long serialVersionUID = 1L;
 	//게임 상태
 	public static int stateGamePlay = 0;
 	public static int stateGamePause = 1;
@@ -46,9 +35,9 @@ public class Board extends JPanel implements KeyListener{
 								Color.decode("#B2FA5C"), Color.decode("#00D7FF"), Color.decode("#FFA98F"), Color.decode("#00FFFF")};
 	
 	private Shape[] shapes = new Shape[7];
-	private Shape currentShape;
+	private Shape currentShape, nextShape;
 	
-	public int score = 0;
+	private int score = 0;
 	
 	
 	public Board() {
@@ -101,6 +90,7 @@ public class Board extends JPanel implements KeyListener{
 			
 			@Override
 			public void actionPerformed(ActionEvent e) {
+				
 				update();
 				repaint();				
 				
@@ -118,12 +108,15 @@ public class Board extends JPanel implements KeyListener{
 		}
 	}
 	
+	public Color[][] getBoard(){
+		return board;
+	}
 	
-    public void setCurrentShape() {
-        currentShape = shapes[random.nextInt(shapes.length)];
-        currentShape.reset();
-        checkGameOver();
-    }
+	public void setCurrentShape() {
+		currentShape = shapes[random.nextInt(shapes.length)];
+		currentShape.reset();
+		checkGameOver();
+		}
 	
 	private void checkGameOver() { // 게임오버 체크
 		int[][] blocks = currentShape.getBlock();
@@ -161,7 +154,6 @@ public class Board extends JPanel implements KeyListener{
 		
 		for(int row = 0; row < board.length; row++) { 
 			for(int col = 0; col < board[row].length; col++) {
-				
 				if(board[row][col] != null) {
 					g.setColor(board[row][col]);
 					g.fillRect(col * blockSize, row * blockSize, blockSize, blockSize);
@@ -200,6 +192,12 @@ public class Board extends JPanel implements KeyListener{
 		}
 		 
 	}
+    public void setNextShape() {
+        int index = random.nextInt(shapes.length);
+        int colorIndex = random.nextInt(colors.length);
+        nextShape = new Shape(shapes[index].getBlock(), this, colors[colorIndex]);
+    }
+
 
 	@Override
 	public void keyTyped(KeyEvent e) {
@@ -211,21 +209,17 @@ public class Board extends JPanel implements KeyListener{
 	public void keyPressed(KeyEvent e) {
 		// TODO Auto-generated method stub
 		
-		if (e.getKeyCode() == KeyEvent.VK_UP) { //블록 회전
-			currentShape.rotateShape();
-			
+			// 드롭 다운.
+		if(e.getKeyCode() == KeyEvent.VK_DOWN) {
+			currentShape.dropDown(); // 하강속도 증가.
 			// 좌우 이동.
 		}else if (e.getKeyCode() == KeyEvent.VK_LEFT) { //좌로 이동
 			currentShape.moveLeft();
-			
 		}else if (e.getKeyCode() == KeyEvent.VK_RIGHT) { //우로 이동
 			currentShape.moveRight();
-			
-			// 드롭 다운
-		}else if(e.getKeyCode() == KeyEvent.VK_DOWN) {
-			currentShape.dropDown(); // 하강속도 증가.
+		}else if (e.getKeyCode() == KeyEvent.VK_UP) { //블록 회전
+			currentShape.rotateShape();
 		}
-		
 		
 		
 		//보드 초기화.
@@ -241,8 +235,6 @@ public class Board extends JPanel implements KeyListener{
 				state = stateGamePlay;
 			}
 		}
-		
-		
 		//일시정지.
 		if(e.getKeyCode() == KeyEvent.VK_SPACE) {
 			if(state == stateGamePlay) {
@@ -262,14 +254,21 @@ public class Board extends JPanel implements KeyListener{
 		if(e.getKeyCode() == KeyEvent.VK_DOWN)
 			currentShape.backNormalSPD(); // 원래 하강속도로 복귀.
 	}
-	
-	public Color[][] getBoard() {
-		return board;
-	}
-	
-    public void addScore() {
-        score+=10;
+
+	class GameLooper implements ActionListener {
+
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            update();
+            repaint();
+        }
+
     }
+
+	public void addScore() {
+		score += 30;
+		
+	}
 
 
 }
