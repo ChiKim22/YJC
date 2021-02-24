@@ -1,5 +1,4 @@
-# YJC
+# Tetris
 YJC
-Tetris
 
 2021 First Personal Prpject
