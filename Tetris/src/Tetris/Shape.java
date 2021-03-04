@@ -24,7 +24,7 @@ private int x = 4, y = 0;
 		this.block = block;
 		this.board = board;
 		this.color = color;
-		delayTimeForMovement = normal;
+		delayTimeForMovement = normal; //게임속도 안정화.
 	}
 	
 	public void setX(int x) {
