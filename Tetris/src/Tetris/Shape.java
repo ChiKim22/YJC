@@ -123,6 +123,9 @@ private int x = 4, y = 0;
 			if(count < board.getBoard()[0].length) {
 				bottomLine--; // 맨 아랫줄 제거.
 			}
+			if(count == 10) {
+				board.addScore(); // 줄 지워질때 점수 추가.
+			}
 		}
 	}
 	
